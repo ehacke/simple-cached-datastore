@@ -1,0 +1,72 @@
+{
+  "name": "simple-cached-datastore",
+  "version": "1.0.0",
+  "description": "Datastore client with simplified API and optional caching built in",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ehacke/simple-cached-datastore.git"
+  },
+  "keywords": [
+    "datastore",
+    "cached",
+    "cache",
+    "google"
+  ],
+  "dependencies": {
+    "@types/bluebird": "^3.5.28",
+    "@types/ioredis": "^4.14.4",
+    "@types/fs-extra": "^8.0.1",
+    "@types/lodash": "^4.14.144",
+    "@types/luxon": "^1.15.2",
+    "@types/mocha": "^5.2.7",
+    "@types/node": "^13.1.8",
+    "@types/redlock": "^4.0.1",
+    "bluebird": "^3.7.2",
+    "lodash": "^4.17.15",
+    "redlock": "^4.1.0"
+  },
+  "devDependencies": {
+    "@ehacke/eslint-config": "^1.0.0",
+    "@ehacke/prettier-config": "^1.0.1",
+    "@istanbuljs/nyc-config-typescript": "^1.0.1",
+    "@types/chai-as-promised": "^7.1.2",
+    "@types/expect": "^24.3.0",
+    "@typescript-eslint/eslint-plugin": "^2.17.0",
+    "@typescript-eslint/parser": "^2.17.0",
+    "chai": "^4.2.0",
+    "dotenv": "^8.2.0",
+    "eslint": "^6.8.0",
+    "eslint-import-resolver-typescript": "^2.0.0",
+    "eslint-plugin-simple-import-sort": "^5.0.0",
+    "fixpack": "^2.3.1",
+    "husky": "^4.0.10",
+    "ioredis": "^4.14.1",
+    "jsdoc": "^3.6.3",
+    "lint-staged": "^10.0.1",
+    "mocha": "^7.0.0",
+    "nyc": "^15.0.0",
+    "prettier": "^1.18.2",
+    "prettier-eslint-cli": "^5.0.0",
+    "ts-node": "^8.6.2",
+    "ts-sinon": "^1.0.24",
+    "tsconfig-paths": "^3.9.0",
+    "typedoc": "^0.16.9",
+    "typedoc-plugin-markdown": "^2.2.16",
+    "typescript": "^3.7.5",
+    "typings": "^2.1.1",
+    "uuid": "^3.4.0"
+  },
+  "peerDependencies": {
+    "@google-cloud/datastore": "^5.0.4"
+  },
+  "author": "Eric Hacke",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ehacke/simple-cached-datastore/issues"
+  },
+  "homepage": "https://github.com/ehacke/simple-cached-datastore#readme"
+}
