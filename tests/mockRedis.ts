@@ -1,6 +1,7 @@
+import { Redis } from "@ehacke/redis";
+
 const redis = {
-  duplicate: () => redis,
   createRedlock: () => ({ lock: async () => ({ unlock: async () => undefined }) }),
-} as any;
+} as unknown as Redis;
 
 export default redis;

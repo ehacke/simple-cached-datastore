@@ -2,7 +2,7 @@ version: "3"
 
 services:
   datastore:
-    image: ehacke/datastore-emulator:latest
+    image: ehacke/datastore-emulator:1.0.1
     environment:
       - DATASTORE_PROJECT_ID=project-test
       - DATASTORE_LISTEN_ADDRESS=0.0.0.0:8081
