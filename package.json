@@ -60,6 +60,7 @@
     "ts-node": "^10.9.2",
     "ts-sinon": "^2.0.2",
     "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.19.3",
     "typedoc": "^0.28.2",
     "typedoc-plugin-markdown": "^4.6.2",
     "typescript": "^5.8.3",
@@ -98,10 +99,10 @@
   "scripts": {
     "build": "rm -rf ./dist && tsc -p tsconfig.build.json",
     "docs": "typedoc --plugin typedoc-plugin-markdown --readme none --exclude \"tests/**/*.+(unit|it).+(ts|js)\"",
-    "integration": "c8 mocha --recursive -r source-map-support/register -r ts-node/register -r tsconfig-paths/register --use_strict --exit \"tests/**/*.it.+(ts|js)\"",
+    "integration": "c8 mocha --recursive -r source-map-support/register -r ts-node/register --import tsx --use_strict --exit \"tests/**/*.it.+(ts|js)\"",
     "lint": "fixpack && prettier-eslint --write && eslint --fix \"**/*.{js,ts}\"",
-    "test": "c8 mocha --recursive -r source-map-support/register -r ts-node/register -r tsconfig-paths/register --use_strict --exit \"tests/**/*.+(unit|it).+(ts|js)\"",
-    "unit": "c8 mocha --recursive -r source-map-support/register -r ts-node/register -r tsconfig-paths/register --use_strict --exit \"tests/**/*.unit.+(ts|js)\""
+    "test": "c8 mocha --recursive -r source-map-support/register -r ts-node/register --import tsx --use_strict --exit \"tests/**/*.+(unit|it).+(ts|js)\"",
+    "unit": "c8 mocha --recursive -r source-map-support/register -r ts-node/register --import tsx --use_strict --exit \"tests/**/*.unit.+(ts|js)\""
   },
   "type": "module",
   "types": "dist/index.d.ts"
