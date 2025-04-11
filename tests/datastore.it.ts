@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import { DateTime } from 'luxon';
 import sinon from 'sinon';
 
-import { Datastore, FILTER_OPERATORS } from '../datastore';
+import { Datastore, FILTER_OPERATORS } from '../index';
 import datastore from './datastore';
 import redis from './mockRedis';
 import { Redis } from "@ehacke/redis";

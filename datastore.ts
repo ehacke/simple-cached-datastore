@@ -5,8 +5,8 @@ import Bluebird from 'bluebird';
 import cleanDeep from 'clean-deep';
 import Err from 'err';
 import stringify from 'fast-json-stable-stringify';
-import flatten from 'flat';
-import { defaultsDeep, isDate, reduce, set } from 'lodash';
+import { flatten } from 'flat';
+import { defaultsDeep, isDate, reduce, set } from 'lodash-es';
 import { DateTime } from 'luxon';
 import pino from 'pino';
 import Redlock from 'redlock';
@@ -133,7 +133,12 @@ export class Datastore<T extends DalModel> extends Cached<T> {
   constructor(services: ServicesInterface, config?: ConfigInterface) {
     super();
 
-    const logOptions = defaultsDeep({}, config?.logConfig, { name: 'datastore', prettyPrint: { colorize: true } });
+    const logOptions = defaultsDeep({}, config?.logConfig, {
+      name: 'datastore',
+      transport: {
+        target: 'pino-pretty',
+      },
+    });
 
     this.services = {
       ...services,
@@ -366,13 +371,13 @@ export class Datastore<T extends DalModel> extends Cached<T> {
   async patch(id: string, patchUpdate: DeepPartial<T>, curDate = DateTime.utc().toJSDate()): Promise<T> {
     if (!this.config) throw new Err(CONFIG_ERROR);
 
-    // @ts-expect-error I'm sure
     const flattened = flatten(
       Datastore.cleanModel({
         ...(await this.config.convertForDb(patchUpdate)),
         updatedAt: curDate,
       })
-    );
+      // eslint-disable-next-line
+    ) as any;
 
     const key = this.getKey(id);
     const lock = await this.patchLock.lock(this.getLockKey(id), CONSTANTS.LOCK_TTL_MS).catch((error) => {
