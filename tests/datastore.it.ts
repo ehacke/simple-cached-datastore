@@ -2,9 +2,10 @@ import { expect } from 'chai';
 import { DateTime } from 'luxon';
 import sinon from 'sinon';
 
-import { Datastore, FILTER_OPERATORS } from '../datastore';
+import { Datastore, FILTER_OPERATORS } from '../index';
 import datastore from './datastore';
 import redis from './mockRedis';
+import { Redis } from "@ehacke/redis";
 
 class TestClass {
   constructor(params) {
@@ -31,9 +32,7 @@ class TestClass {
 
   updatedAt: Date;
 
-  validate() {
-    return true;
-  }
+  validate() {}
 
   getDalSchema() {
     return {
@@ -44,8 +43,8 @@ class TestClass {
 
 const config = {
   collection: 'collection-foo',
-  convertFromDb: (params) => new TestClass(params),
   convertForDb: (params) => params,
+  convertFromDb: (params) => new TestClass(params),
 };
 
 const defaultServices = {
@@ -74,14 +73,13 @@ describe('datastore integration tests', function() {
     const ds = new Datastore<TestClass>(defaultServices);
     ds.configure(config);
 
-    // @ts-ignore
-    const spied = sinon.spy<Cache>(ds.cache);
+    const spied = sinon.spy(ds.cache);
 
     const testInstance = new TestClass({
-      id: 'foo-id',
-      foo: 'something',
       bar: 'baz',
       createdAt: DateTime.fromISO('2019-01-01T00:00:00.000Z').toJSDate(),
+      foo: 'something',
+      id: 'foo-id',
       updatedAt: DateTime.fromISO('2019-01-01T00:00:00.000Z').toJSDate(),
     });
 
@@ -106,14 +104,14 @@ describe('datastore integration tests', function() {
     ds.configure(config);
 
     const testInstance = new TestClass({
-      id: 'foo-id',
-      foo: 'something',
       bar: 'baz',
       createdAt: DateTime.fromISO('2019-01-01T00:00:00.000Z').toJSDate(),
+      foo: 'something',
+      id: 'foo-id',
       updatedAt: DateTime.fromISO('2019-01-01T00:00:00.000Z').toJSDate(),
     });
 
-    // @ts-ignore
+    // @ts-expect-error test
     testInstance.createdAt = '2019-01-01T00:00:00.000Z';
 
     let result = await ds
@@ -123,7 +121,7 @@ describe('datastore integration tests', function() {
     expect(result && result.message).to.eql('createdAt must be a Date');
 
     testInstance.createdAt = DateTime.fromISO('2019-01-01T00:00:00.000Z').toJSDate();
-    // @ts-ignore
+    // @ts-expect-error test
     testInstance.updatedAt = '2019-01-01T00:00:00.000Z';
 
     result = await ds
@@ -136,26 +134,27 @@ describe('datastore integration tests', function() {
   it('patch deep model in db', async () => {
     const ds = new Datastore<TestClass>(defaultServices);
     ds.configure(config);
-    // @ts-ignore
-    const spied = sinon.spy<Cache>(ds.cache);
+    // @ts-expect-error test
+    // eslint-disable-next-line
+    const spied = sinon.spy<Cache>(ds.cache) as any;
 
     const curDate = DateTime.fromISO('2019-01-01T00:00:00.000Z').toJSDate();
 
     const testInstance = new TestClass({
-      id: 'foo-id',
-      foo: 'something',
       bar: 'baz',
+      createdAt: curDate,
       deep: {
         thing1: '1',
         thing2: '2',
       },
-      createdAt: curDate,
+      foo: 'something',
+      id: 'foo-id',
       updatedAt: curDate,
     });
 
     const created = await ds.create(testInstance);
     resetSpies(spied);
-    const updated = await ds.patch(created.id, { foo: 'new-foo', deep: { thing2: '9' } }, curDate);
+    const updated = await ds.patch(created.id, { deep: { thing2: '9' }, foo: 'new-foo' }, curDate);
 
     expect(spied.get.callCount).to.eql(0);
     expect(spied.set.callCount).to.eql(1);
@@ -179,16 +178,15 @@ describe('datastore integration tests', function() {
   it('update', async () => {
     const ds = new Datastore<TestClass>(defaultServices);
     ds.configure(config);
-    // @ts-ignore
-    const spied = sinon.spy<Cache>(ds.cache);
+    const spied = sinon.spy(ds.cache);
 
     const curDate = DateTime.fromISO('2019-01-01T00:00:00.000Z').toJSDate();
 
     const testInstance = new TestClass({
-      id: 'foo-id',
-      foo: 'something',
       bar: 'baz',
       createdAt: curDate,
+      foo: 'something',
+      id: 'foo-id',
       updatedAt: curDate,
     });
 
@@ -214,16 +212,15 @@ describe('datastore integration tests', function() {
   it('remove', async () => {
     const ds = new Datastore<TestClass>(defaultServices);
     ds.configure(config);
-    // @ts-ignore
-    const spied = sinon.spy<Cache>(ds.cache);
+    const spied = sinon.spy(ds.cache);
 
     const curDate = DateTime.fromISO('2019-01-01T00:00:00.000Z').toJSDate();
 
     const testInstance = new TestClass({
-      id: 'foo-id',
-      foo: 'something',
       bar: 'baz',
       createdAt: curDate,
+      foo: 'something',
+      id: 'foo-id',
       updatedAt: curDate,
     });
 
@@ -249,21 +246,20 @@ describe('datastore integration tests', function() {
   it('list', async () => {
     const ds = new Datastore<TestClass>(defaultServices);
     ds.configure(config);
-    // @ts-ignore
-    const spied = sinon.spy<Cache>(ds.cache);
+    const spied = sinon.spy(ds.cache);
 
     const testInstance = new TestClass({
-      id: 'foo-id',
-      foo: 'something',
       bar: 'baz',
       createdAt: DateTime.fromISO('2019-01-01T00:00:00.000Z').toJSDate(),
+      foo: 'something',
+      id: 'foo-id',
       updatedAt: DateTime.fromISO('2019-01-01T00:00:00.000Z').toJSDate(),
     });
 
-    const created = [] as any[];
+    const created = [] as TestClass[];
 
     created.push(await ds.create(testInstance));
-    created.push(await ds.create(new TestClass({ ...testInstance, id: '2', foo: 'another' })));
+    created.push(await ds.create(new TestClass({ ...testInstance, foo: 'another', id: '2' })));
     created.sort((a, b) => a.id.localeCompare(b.id));
 
     resetSpies(spied);
@@ -286,25 +282,24 @@ describe('datastore integration tests', function() {
   it('list with filters', async () => {
     const ds = new Datastore<TestClass>(defaultServices);
     ds.configure(config);
-    // @ts-ignore
-    const spied = sinon.spy<Cache>(ds.cache);
+    const spied = sinon.spy(ds.cache);
 
     const testInstance = new TestClass({
-      id: 'foo-id',
-      foo: 'something',
       bar: 'baz',
       createdAt: DateTime.fromISO('2019-01-01T00:00:00.000Z').toJSDate(),
+      foo: 'something',
+      id: 'foo-id',
       updatedAt: DateTime.fromISO('2019-01-01T00:00:00.000Z').toJSDate(),
     });
 
-    const created = [] as any[];
+    const created = [] as TestClass[];
 
     created.push(await ds.create(testInstance));
-    created.push(await ds.create(new TestClass({ ...testInstance, id: '2', foo: 'another' })));
+    created.push(await ds.create(new TestClass({ ...testInstance, foo: 'another', id: '2' })));
 
     resetSpies(spied);
 
-    const found = await ds.query({ filters: [{ property: 'foo', operator: FILTER_OPERATORS.EQ, value: 'something' }] });
+    const found = await ds.query({ filters: [{ operator: FILTER_OPERATORS.EQ, property: 'foo', value: 'something' }] });
     found.sort((a, b) => a.id.localeCompare(b.id));
 
     expect(spied.get.callCount).to.eql(0);
@@ -325,35 +320,35 @@ describe('datastore integration tests', function() {
 
     const services = {
       ...defaultServices,
-      redis: { createRedlock: sinon.stub().returns(redlock) } as any,
+      redis: { createRedlock: sinon.stub().returns(redlock) } as unknown as Redis,
     };
     const ds = new Datastore<TestClass>(services);
     ds.configure(config);
-    // @ts-ignore
-    const spied = sinon.spy<Cache>(ds.cache);
+    const spied = sinon.spy(ds.cache);
 
     const curDate = DateTime.fromISO('2019-01-01T00:00:00.000Z').toJSDate();
 
     const testInstance = new TestClass({
-      id: 'foo-id',
-      foo: 'something',
       bar: 'baz',
+      createdAt: curDate,
       deep: {
         thing1: '1',
         thing2: '2',
       },
-      createdAt: curDate,
+      foo: 'something',
+      id: 'foo-id',
       updatedAt: curDate,
     });
 
     const created = await ds.create(testInstance);
     resetSpies(spied);
-    const updated = await ds.patch(created.id, { foo: 'new-foo', deep: { thing2: '9' } }, curDate);
+    const updated = await ds.patch(created.id, { deep: { thing2: '9' }, foo: 'new-foo' }, curDate);
 
     const found = await ds.getOrThrow(testInstance.id);
 
     expect(found).to.eql(updated);
-    expect(services.redis.createRedlock.args).to.eql([
+    // eslint-disable-next-line
+    expect((services.redis.createRedlock as any).args).to.eql([
       [
         {
           retryCount: 15,
@@ -373,34 +368,34 @@ describe('datastore integration tests', function() {
 
     const services = {
       ...defaultServices,
-      redis: { createRedlock: sinon.stub().returns(redlock) } as any,
+      redis: { createRedlock: sinon.stub().returns(redlock) } as unknown as Redis,
     };
     const ds = new Datastore<TestClass>(services);
     ds.configure(config);
-    // @ts-ignore
-    const spied = sinon.spy<Cache>(ds.cache);
+    const spied = sinon.spy(ds.cache);
 
     const curDate = DateTime.fromISO('2019-01-01T00:00:00.000Z').toJSDate();
 
     const testInstance = new TestClass({
-      id: 'foo-id',
-      foo: 'something',
       bar: 'baz',
+      createdAt: curDate,
       deep: {
         thing1: '1',
         thing2: '2',
       },
-      createdAt: curDate,
+      foo: 'something',
+      id: 'foo-id',
       updatedAt: curDate,
     });
 
     const created = await ds.create(testInstance);
     resetSpies(spied);
     sinon.stub(ds.services.datastore, 'transaction').throws(new Error('boom'));
-    const updated = await ds.patch(created.id, { foo: 'new-foo', deep: { thing2: '9' } }, curDate).catch((error) => error.message);
+    const updated = await ds.patch(created.id, { deep: { thing2: '9' }, foo: 'new-foo' }, curDate).catch((error) => error.message);
 
     expect(updated).to.eql('boom');
-    expect(services.redis.createRedlock.args).to.eql([
+    // eslint-disable-next-line
+    expect((services.redis.createRedlock as any).args).to.eql([
       [
         {
           retryCount: 15,

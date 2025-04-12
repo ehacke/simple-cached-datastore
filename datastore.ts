@@ -5,14 +5,14 @@ import Bluebird from 'bluebird';
 import cleanDeep from 'clean-deep';
 import Err from 'err';
 import stringify from 'fast-json-stable-stringify';
-import flatten from 'flat';
-import { defaultsDeep, isDate, reduce, set } from 'lodash';
+import { flatten } from 'flat';
+import { defaultsDeep, isDate, reduce, set } from 'lodash-es';
 import { DateTime } from 'luxon';
 import pino from 'pino';
 import Redlock from 'redlock';
 import { DeepPartial } from 'ts-essentials';
 
-const log = pino({ prettyPrint: true });
+const log = pino({ transport: { target: 'pino-pretty' } });
 
 export enum FILTER_OPERATORS {
   GT = '>',
@@ -20,6 +20,7 @@ export enum FILTER_OPERATORS {
   LT = '<',
   LTE = '<=',
   EQ = '=',
+  // eslint-disable-next-line @typescript-eslint/no-duplicate-enum-values
   CONTAINS = '=',
 }
 
@@ -54,10 +55,19 @@ export interface DalSchema {
 
 export interface DalModel {
   id: string;
-  validate(): any;
+
+  validate(): Promise<void> | void;
+
   getDalSchema(): DalSchema;
+
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface CleanedDalModel {
+  id?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 interface ServicesInterface {
@@ -78,13 +88,17 @@ interface ConfigInterface {
 
 export interface DatastoreConfigInterface<T extends DalModel> {
   collection: string;
-  convertForDb(instance: DeepPartial<T>): any;
-  convertFromDb(params: any): T | Promise<T>;
+
+  convertForDb(instance: DeepPartial<T>): object;
+
+  convertFromDb(params: object): T | Promise<T>;
 }
 
 export interface DatastoreCacheConfigInterface<T extends DalModel> {
   cacheTtlSec: number;
+
   stringifyForCache(instance: T): Promise<string> | string;
+
   parseFromCache(instance: string): Promise<T> | T;
 }
 
@@ -99,11 +113,11 @@ const CLEAN_CONFIG = {
 const CONFIG_ERROR = 'datastore instance not configured';
 
 const CONSTANTS = {
-  MAX_LOCK_ATTEMPTS: 15,
   LOCK_DELAY_MS: 150,
-  RETRY_JITTER_MS: 30,
-  LOCK_TTL_MS: 5000,
   LOCK_PREFIX: 'datastore-',
+  LOCK_TTL_MS: 5000,
+  MAX_LOCK_ATTEMPTS: 15,
+  RETRY_JITTER_MS: 30,
 };
 
 /**
@@ -115,12 +129,16 @@ export class Datastore<T extends DalModel> extends Cached<T> {
   /**
    * @param {ServicesInterface} services
    * @param {DatastoreConfigInterface} config
-   * @param {DatastoreCacheConfigInterface<T>} cacheConfig
    */
   constructor(services: ServicesInterface, config?: ConfigInterface) {
     super();
 
-    const logOptions = defaultsDeep({}, config?.logConfig, { name: 'datastore', prettyPrint: { colorize: true } });
+    const logOptions = defaultsDeep({}, config?.logConfig, {
+      name: 'datastore',
+      transport: {
+        target: 'pino-pretty',
+      },
+    });
 
     this.services = {
       ...services,
@@ -147,7 +165,7 @@ export class Datastore<T extends DalModel> extends Cached<T> {
 
     if (cacheConfig) {
       const { cacheTtlSec: ttlSec, stringifyForCache, parseFromCache } = cacheConfig;
-      this.configureCache({ redis }, { ttlSec, stringifyForCache, parseFromCache, prefix: config.collection });
+      this.configureCache({ redis }, { parseFromCache, prefix: config.collection, stringifyForCache, ttlSec });
     }
   }
 
@@ -160,13 +178,13 @@ export class Datastore<T extends DalModel> extends Cached<T> {
    * @param {{}} model
    * @returns {{}}
    */
-  private static cleanModel(model: { [k: string]: any }): { [k: string]: any } {
+  private static cleanModel<T extends CleanedDalModel>(model: T): T {
     model = { ...model };
 
     if (model.createdAt) delete model.createdAt;
     if (model.id) delete model.id;
 
-    return cleanDeep(model, CLEAN_CONFIG);
+    return cleanDeep(model, CLEAN_CONFIG) as T;
   }
 
   /**
@@ -180,8 +198,6 @@ export class Datastore<T extends DalModel> extends Cached<T> {
     let datastoreQuery = this.services.datastore.createQuery(this.config.collection);
 
     if (query.filters) {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-      // @ts-ignore // assuming the filter banning null is wrong
       datastoreQuery = reduce(query.filters, (result, filter) => result.filter(filter.property, filter.operator, filter.value), datastoreQuery);
     }
 
@@ -211,7 +227,7 @@ export class Datastore<T extends DalModel> extends Cached<T> {
     await instance.validate();
 
     // I don't know why that casting is necessary
-    const data = cleanDeep(await this.config.convertForDb(instance as DeepPartial<T>), CLEAN_CONFIG);
+    const data = cleanDeep(await this.config.convertForDb(instance as DeepPartial<T>), CLEAN_CONFIG) as T;
 
     if (!isDate(data.createdAt)) {
       throw new Err('createdAt must be a Date');
@@ -225,14 +241,21 @@ export class Datastore<T extends DalModel> extends Cached<T> {
     await this.cache.delLists();
 
     const { excludeFromIndexes = [] } = instance.getDalSchema();
-    await this.services.datastore.insert({ key: this.getKey(instance.id), data, excludeFromIndexes, excludeLargeProperties: true }).catch((error) => {
-      if (error.message.includes('ALREADY_EXISTS')) {
-        log.error(`Collision creating: ${JSON.stringify(instance)}`);
-        throw new Err('Internal error creating record');
-      }
+    await this.services.datastore
+      .insert({
+        data,
+        excludeFromIndexes,
+        excludeLargeProperties: true,
+        key: this.getKey(instance.id),
+      })
+      .catch((error) => {
+        if (error.message.includes('ALREADY_EXISTS')) {
+          log.error(`Collision creating: ${JSON.stringify(instance)}`);
+          throw new Err('Internal error creating record');
+        }
 
-      throw error;
-    });
+        throw error;
+      });
 
     await this.cache.delLists();
     await this.cache.set(instance.id, instance);
@@ -282,7 +305,7 @@ export class Datastore<T extends DalModel> extends Cached<T> {
       const result = data ? await this.config.convertFromDb({ id, ...data }) : null;
       if (!result) await this.cache.del(id);
       return result;
-    } catch (error) {
+    } catch (error: Err) {
       log.error(`Error while reading from db: ${error.message}`);
       log.error('Data: ', data);
       throw error;
@@ -294,7 +317,7 @@ export class Datastore<T extends DalModel> extends Cached<T> {
    * @param {string} id
    * @returns {Promise<any | null>}
    */
-  async rawGet(id: string): Promise<any | null> {
+  async rawGet(id: string): Promise<unknown | null> {
     if (!this.config) throw new Err(CONFIG_ERROR);
 
     const [data] = await this.services.datastore.get(this.getKey(id));
@@ -348,7 +371,13 @@ export class Datastore<T extends DalModel> extends Cached<T> {
   async patch(id: string, patchUpdate: DeepPartial<T>, curDate = DateTime.utc().toJSDate()): Promise<T> {
     if (!this.config) throw new Err(CONFIG_ERROR);
 
-    const flattened = flatten(Datastore.cleanModel({ ...(await this.config.convertForDb(patchUpdate)), updatedAt: curDate }));
+    const flattened = flatten(
+      Datastore.cleanModel({
+        ...(await this.config.convertForDb(patchUpdate)),
+        updatedAt: curDate,
+      })
+      // eslint-disable-next-line
+    ) as any;
 
     const key = this.getKey(id);
     const lock = await this.patchLock.lock(this.getLockKey(id), CONSTANTS.LOCK_TTL_MS).catch((error) => {
@@ -373,9 +402,9 @@ export class Datastore<T extends DalModel> extends Cached<T> {
         const [currentData] = await transaction.get(key);
         data = reduce(flattened, (result, value, path) => set(result, path, value), currentData);
         // DO NOT AWAIT THIS. It blocks until the transaction completes
-        transaction.save({ key, data, excludeLargeProperties: true });
+        transaction.save({ data, excludeLargeProperties: true, key });
         await transaction.commit();
-      } catch (error) {
+      } catch (error: Err) {
         await transaction.rollback();
         throw error;
       }
@@ -387,7 +416,7 @@ export class Datastore<T extends DalModel> extends Cached<T> {
       await this.cache.set(id, instance);
 
       return instance;
-    } catch (error) {
+    } catch (error: Err) {
       await lock.unlock().catch((_error) => {
         if (_error?.message?.includes('LockError: Unable to fully release the lock')) {
           log.error(_error.stack);
@@ -449,9 +478,13 @@ export class Datastore<T extends DalModel> extends Cached<T> {
     await this.cache.delLists();
 
     // I don't know why that casting is necessary
-    const updated = { ...(await this.config.convertForDb(instance as DeepPartial<T>)), updatedAt: curDate, id };
+    const updated = { ...(await this.config.convertForDb(instance as DeepPartial<T>)), id, updatedAt: curDate };
 
-    await this.services.datastore.merge({ key: this.getKey(id), excludeLargeProperties: true, data: Datastore.cleanModel(updated) });
+    await this.services.datastore.merge({
+      data: Datastore.cleanModel(updated),
+      excludeLargeProperties: true,
+      key: this.getKey(id),
+    });
 
     const updatedInstance = await this.config.convertFromDb(updated);
     await this.cache.del(id);
@@ -488,7 +521,7 @@ export class Datastore<T extends DalModel> extends Cached<T> {
    * @param {QueryInterface} query
    * @returns {Promise<any[]>}
    */
-  async rawQuery(query: QueryInterface): Promise<any[]> {
+  async rawQuery(query: QueryInterface): Promise<unknown[]> {
     const [rawResults] = await this.getQuery(query).run();
 
     return rawResults.map((rawResult) => {
