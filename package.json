@@ -1,15 +1,10 @@
 {
 	"name": "simple-cached-datastore",
 	"description": "Datastore wrapper with simplified API and optional caching built in",
-	"version": "2.0.1",
+	"version": "2.0.2",
 	"author": "Eric Hacke",
 	"bugs": {
 		"url": "https://github.com/ehacke/simple-cached-datastore/issues"
-	},
-	"config": {
-		"commitizen": {
-			"path": "./node_modules/cz-conventional-changelog"
-		}
 	},
 	"dependencies": {
 		"@ehacke/redis": "^2.0.10",
@@ -33,9 +28,6 @@
 		"ts-essentials": "^10.0.4"
 	},
 	"devDependencies": {
-		"@commitlint/cli": "^19.8.0",
-		"@commitlint/config-conventional": "^19.8.0",
-		"@ehacke/commitlint-config": "^4.0.2",
 		"@ehacke/eslint-config": "^2.1.2",
 		"@ehacke/prettier-config": "^3.0.1",
 		"@google-cloud/datastore": "^9.2.1",
@@ -48,8 +40,6 @@
 		"axios": "^1.8.4",
 		"c8": "^10.1.3",
 		"chai": "^5.2.0",
-		"commitizen": "^4.3.1",
-		"commitlint": "^19.8.0",
 		"dotenv": "^16.5.0",
 		"eslint": "^9.24.0",
 		"eslint-import-resolver-typescript": "^4.3.2",

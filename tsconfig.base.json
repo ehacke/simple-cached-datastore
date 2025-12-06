@@ -1,9 +1,4 @@
 {
-  "exclude": [
-    "node_modules",
-    "./coverage",
-    "./scratch.*"
-  ],
   "compilerOptions": {
     "incremental": true,
     "target": "es2019",
@@ -53,5 +48,10 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "declaration": true
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "./coverage",
+    "./scratch.*"
+  ]
 }
