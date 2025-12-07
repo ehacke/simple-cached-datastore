@@ -1,7 +1,7 @@
 {
 	"name": "simple-cached-datastore",
 	"description": "Datastore wrapper with simplified API and optional caching built in",
-	"version": "2.0.3",
+	"version": "2.0.4",
 	"author": "Eric Hacke",
 	"bugs": {
 		"url": "https://github.com/ehacke/simple-cached-datastore/issues"
