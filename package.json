@@ -7,7 +7,7 @@
 		"url": "https://github.com/ehacke/simple-cached-datastore/issues"
 	},
 	"dependencies": {
-		"@ehacke/redis": "^2.0.13",
+		"@ehacke/redis": "^2.0.14",
 		"@types/bluebird": "^3.5.42",
 		"@types/lodash": "^4.17.21",
 		"@types/luxon": "^3.7.1",
